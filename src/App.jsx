@@ -15,6 +15,7 @@ import SVGpath from './SVGpath';
 import Everpolate from 'everpolate';
 
 import './App.css';
+import { useState } from 'react';
 
 const startPoint = { x: 0, y: 0 };
 const endPoint = { x: 10, y: 0 };
@@ -28,23 +29,63 @@ const yUiRange = { min: 0, max: 300 };
 const xRatio = xUiRange.max / xRange.max;
 const yRatio = yUiRange.max / yRange.max;
 
-const Point = (props) => {
-  const pointStyle = {
-    left: `${props.x * xRatio}px`,
-    bottom: `${props.y * yRatio}px`,
+class Point extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      isMousePressed: false,
+      position: { x: props.x, y: props.y },
+    };
   }
-  const pointS = {
-    width: `${props.size}px`,
-    height: `${props.size}px`,
-    left: `${props.size/2}px`,
-    top: `${props.size/2}px`,
-  };
+  componentWillReceiveProps(props) {
+    this.setState({ position: props })
+  }
 
-  return (
-    <div style={pointStyle} className="wanted-point-container">
-      <div style={pointS} className="wanted-point"/>
-    </div>
-  );
+  render() {
+    if (this.state.isMousePressed) {
+      document.onmousemove = e => {
+        if (this.state.isMousePressed) {
+          const ex = { target: { name: "x", value: (e.x - 23)/xRatio} }
+          const ey = { target: { name: "y", value: (yUiRange.max - e.y)/yRatio } }
+          this.setState({ position: { x: ex.target.value , y:  ey.target.value } });
+          this.props.onInput(ex);
+          this.props.onInput(ey);
+        }
+      }
+
+      document.onmouseup = e => {
+        this.setState({ isMousePressed: false });
+      }
+    }
+
+    const pointStyle = {
+      left: `${this.state.position.x * xRatio}px`,
+      bottom: `${this.state.position.y * yRatio}px`,
+    }
+    const pointS = {
+      width: `${this.props.size}px`,
+      height: `${this.props.size}px`,
+      left: `${this.props.size/2}px`,
+      top: `${this.props.size/2}px`,
+    };
+    return (
+      <div draggable={false} style={pointStyle} className="wanted-point-container" >
+        <div draggable={false} style={pointS}
+          className="wanted-point"
+          onMouseDown={e => this.setState({ isMousePressed: true })}
+          onMouseMove={e => {
+            if (this.state.isMousePressed) {
+              const ex = { target: { name: "x", value: (e.x - 23)/xRatio.toFixed(1)} }
+              const ey = { target: { name: "y", value: (yUiRange.max - e.y + 5)/yRatio.toFixed(1) } }
+              this.setState({ position: { x: ex.target.value , y:  ey.target.value } });
+              this.props.onInput(ex);
+              this.props.onInput(ey);
+            }
+          }}
+        />
+      </div>
+    );
+  }
 }
 
 const PointData = props => {
@@ -112,12 +153,14 @@ class App extends React.Component {
       ],
       newPoint: { x: 1, y: 0 },
       mag: 6,
-      output: ""
+      pointsAmount: 250,
+      output: "",
+      selectedPoint: null
     };
   }
   renderWantedPoints = () => {
     return this.state.wantedPoints.map((point, idx) =>
-      <Point key={`p-${idx}`} x={point.x} y={point.y}/>
+      <Point selected={this.state.selectedPoint === idx} onInput={this.editWantedPoint(idx)} key={`p-${idx}`} x={point.x} y={point.y}/>
     )
   }
   renderPath = () => {
@@ -159,7 +202,7 @@ class App extends React.Component {
     fileReader.readAsText(e.target.files[0]);
   }
   createTextFile = () => {
-    const amountOfPoints = 500;
+    const amountOfPoints = this.state.pointsAmount;
     const step = xRange.max / amountOfPoints;
     const paths = createHermitePath(this.state.wantedPoints, this.state.mag);
     const path = _.flatten(paths);
@@ -191,8 +234,8 @@ class App extends React.Component {
   editWantedPoint = idx => e => {
     const { name, value } = e.target;
     const { wantedPoints } = this.state;
-    wantedPoints[idx][name] = value;
-    this.setState({ wantedPoints });
+    wantedPoints[idx][name] = Math.max(value, 0);
+    this.setState({ wantedPoints, selectedPoint: idx });
   }
   removeWantedPoint = point => () => {
     const { wantedPoints } = this.state;
@@ -254,17 +297,23 @@ class App extends React.Component {
                 </Row>
               </Form>
               <Row className="justify-content-center mt-4">
-                <Button type="submit" onClick={this.createTextFile} color="danger">Get Text</Button>
+                <label className="ml-3"> Output points: </label>
+                <Col xs="3">
+                  <Input name="pointsAmount" onInput={this.onInput} value={this.state.pointsAmount}/>
+                </Col>
                 <label className="ml-3"> Magnitude: </label>
                 <Col xs="3">
                   <Input name="mag" type="number" onInput={this.onInput} value={this.state.mag}></Input>
                 </Col>
+              </Row>
+              <Row className="justify-content-around mt-3">
+                <Button type="submit" onClick={this.createTextFile} color="danger">Get Text</Button>
                 <a href={`data:application/xml;charset=utf-8, ${JSON.stringify(this.state)}`} download="myProfile.json">Save</a>
-                <Col xs="3">
+                <Col xs="5">
                   <Input accept=".json" type="file" onChange={this.onFileLoad}/>
                 </Col>
               </Row>
-                  <Input type="textarea" rows="5" className="mt-3" value={this.state.output}></Input>
+              <Input type="textarea" rows="5" className="mt-3" value={this.state.output}></Input>
             </Col>
           </Row>
         </div>

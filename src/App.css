@@ -33,6 +33,7 @@ svg {
   top: -7.5px;
   width: 15px;
   height: 15px;
+  cursor: grab;
 }
 
 .path:hover {
