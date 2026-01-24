@@ -9,10 +9,10 @@
     "bootstrap": "^4.4.1",
     "everpolate": "0.0.3",
     "jquery": "^3.4.1",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.23",
     "react": "^16.13.0",
     "react-dom": "^16.13.0",
-    "react-scripts": "3.4.0",
+    "react-scripts": "3.4.4",
     "reactstrap": "^8.4.1"
   },
   "scripts": {
